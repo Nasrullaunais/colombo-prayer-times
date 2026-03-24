@@ -41,15 +41,32 @@ Item {
       hijriDay = Math.max(1, Math.min(30, hijriDayRaw + hijriDayOffset))
   }
 
-  onMethodChanged: Qt.callLater(refreshToday)
+  // Only re-load today if databases are already loaded
+  onMethodChanged: { if (_loadedCount >= 2) Qt.callLater(refreshToday) }
 
   readonly property var prayerKeys:       ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
   readonly property var notificationKeys: ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
 
   // ── Local databases ───────────────────────────────────────────────────────
-  property var acjuDatabase: []
-  property var oldDatabase:  []
-  property int _loadedCount: 0
+  property var  acjuDatabase:    []
+  property var  oldDatabase:     []
+  property int  _loadedCount:    0
+  property bool _dbLoadStarted:  false
+
+  // pluginApi is injected after Component.onCompleted fires; watch both events
+  onPluginApiChanged: Qt.callLater(_startLoading)
+
+  function _startLoading() {
+    if (_dbLoadStarted) return
+    if (!pluginApi?.pluginDir) return
+    _dbLoadStarted = true
+    isLoading = true
+    Logger.d("ColomboPT", "Starting load from:", pluginApi.pluginDir)
+    acjuCatProcess.command = ["cat", pluginApi.pluginDir + "/assets/ACJU_colombo.json"]
+    oldCatProcess.command  = ["cat", pluginApi.pluginDir + "/assets/OLD.json"]
+    acjuCatProcess.running = true
+    oldCatProcess.running  = true
+  }
 
   function _onDbLoaded() {
     _loadedCount++
@@ -60,28 +77,58 @@ Item {
     fetchHijriDate()
   }
 
-  function _loadJson(filePath, onSuccess) {
-    const xhr = new XMLHttpRequest()
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState !== XMLHttpRequest.DONE) return
-      if (xhr.status === 200 || xhr.status === 0) {
-        try {
-          onSuccess(JSON.parse(xhr.responseText))
-        } catch (e) {
-          Logger.e("ColomboPT", "JSON parse error:", filePath, e.message)
-          hasError = true
-          errorMessage = pluginApi?.tr("error.generic") ?? "Failed to load."
-          _loadedCount++
-        }
-      } else {
-        Logger.e("ColomboPT", "File load error:", filePath, xhr.status)
-        hasError = true
-        errorMessage = pluginApi?.tr("error.generic") ?? "Failed to load."
-        _loadedCount++
-      }
+  Process {
+    id: acjuCatProcess
+    property string _buf: ""
+    running: false
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: data => acjuCatProcess._buf += data + "\n"
     }
-    xhr.open("GET", "file://" + filePath)
-    xhr.send()
+    onExited: code => {
+      if (code === 0 && _buf.length > 0) {
+        try {
+          root.acjuDatabase = JSON.parse(_buf)
+          Logger.d("ColomboPT", "ACJU parsed:", root.acjuDatabase.length, "entries")
+        } catch (e) {
+          Logger.e("ColomboPT", "ACJU JSON parse error:", e.message)
+          root.hasError = true
+          root.errorMessage = root.pluginApi?.tr("error.generic") ?? "Failed to load."
+        }
+      } else if (code !== 0) {
+        Logger.e("ColomboPT", "ACJU cat failed, exit code:", code)
+        root.hasError = true
+        root.errorMessage = root.pluginApi?.tr("error.generic") ?? "Failed to load."
+      }
+      root._onDbLoaded()
+    }
+  }
+
+  Process {
+    id: oldCatProcess
+    property string _buf: ""
+    running: false
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: data => oldCatProcess._buf += data + "\n"
+    }
+    onExited: code => {
+      if (code === 0 && _buf.length > 0) {
+        try {
+          root.oldDatabase = JSON.parse(_buf)
+          Logger.d("ColomboPT", "OLD parsed:", root.oldDatabase.length, "entries")
+        } catch (e) {
+          Logger.e("ColomboPT", "OLD JSON parse error:", e.message)
+          root.hasError = true
+          root.errorMessage = root.pluginApi?.tr("error.generic") ?? "Failed to load."
+        }
+      } else if (code !== 0) {
+        Logger.e("ColomboPT", "OLD cat failed, exit code:", code)
+        root.hasError = true
+        root.errorMessage = root.pluginApi?.tr("error.generic") ?? "Failed to load."
+      }
+      root._onDbLoaded()
+    }
   }
 
   // ── Entry normalization (luhr→Dhuhr, magrib→Maghrib) ─────────────────────
@@ -320,24 +367,5 @@ Item {
   }
 
   // ── Startup ───────────────────────────────────────────────────────────────
-  Component.onCompleted: {
-    if (!pluginApi?.pluginDir) {
-      Logger.e("ColomboPT", "pluginDir unavailable on startup")
-      hasError = true
-      errorMessage = "Plugin directory not found."
-      return
-    }
-    isLoading = true
-    const dir = pluginApi.pluginDir
-    _loadJson(dir + "/assets/ACJU_colombo.json", function (data) {
-      acjuDatabase = data
-      Logger.d("ColomboPT", "ACJU database loaded:", data.length, "entries")
-      _onDbLoaded()
-    })
-    _loadJson(dir + "/assets/OLD.json", function (data) {
-      oldDatabase = data
-      Logger.d("ColomboPT", "OLD database loaded:", data.length, "entries")
-      _onDbLoaded()
-    })
-  }
+  Component.onCompleted: Qt.callLater(_startLoading)
 }

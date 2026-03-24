@@ -1,7 +1,7 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import qs.Commons
+import qs.Modules.Bar.Extras
 import qs.Services.UI
 import qs.Widgets
 
@@ -13,12 +13,6 @@ Item {
   property ShellScreen screen
   property string widgetId: ""
   property string section: ""
-
-  readonly property string screenName:    screen?.name ?? ""
-  readonly property string barPosition:   Settings.getBarPositionForScreen(screenName)
-  readonly property bool   isVertical:    barPosition === "left" || barPosition === "right"
-  readonly property real   capsuleHeight: Style.getCapsuleHeightForScreen(screenName)
-  readonly property real   barFontSize:   Style.getBarFontSizeForScreen(screenName)
 
   property var cfg:      pluginApi?.pluginSettings || ({})
   property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
@@ -79,128 +73,35 @@ Item {
     return nextPrayerLabel + " " + nextPrayerTimeStr
   }
 
-  readonly property string verticalLine1: {
-    if (isLoading && !prayerTimings) return "..."
-    if (hasError) return "!"
-    if (!prayerTimings || !nextPrayerName) return "—"
-    return nextPrayerLabel
-  }
-
-  readonly property string verticalLine2: {
-    if (!prayerTimings || !nextPrayerName) return ""
-    if (prayerNow) return pluginApi?.tr("widget.now") ?? "Now"
-    if (showCountdown && secondsToNext > 0) return countdownStr
-    return nextPrayerTimeStr
-  }
-
-  readonly property string tooltipText: {
+  readonly property string prayerTooltipText: {
     if (!prayerTimings) return pluginApi?.tr("widget.tooltip.noData") ?? "Prayer data not loaded"
     return nextPrayerLabel + ": " + nextPrayerTimeStr + "\n" +
            (pluginApi?.tr("widget.tooltip.countdown") ?? "Time remaining") + ": " + countdownStr
   }
 
-  readonly property real iconSize: Style.toOdd(capsuleHeight * 0.55)
+  implicitWidth: pill.width
+  implicitHeight: pill.height
 
-  readonly property real contentWidth: {
-    if (isVertical) return capsuleHeight
-    return iconSize + Style.marginS + labelText.implicitWidth + Style.marginM * 2
-  }
-  readonly property real contentHeight: isVertical ? capsuleHeight * 2 : capsuleHeight
+  BarPill {
+    id: pill
 
-  implicitWidth:  contentWidth
-  implicitHeight: contentHeight
+    screen: root.screen
+    oppositeDirection: BarService.getPillDirection(root)
+    icon: "building-mosque"
+    text: root.displayText
+    tooltipText: root.prayerTooltipText
 
-  Rectangle {
-    id: capsule
-    x: Style.pixelAlignCenter(parent.width,  width)
-    y: Style.pixelAlignCenter(parent.height, height)
-    width:  root.contentWidth
-    height: root.contentHeight
-    radius: Style.radiusL
-    color:        mouseArea.containsMouse ? Color.mHover : Style.capsuleColor
-    border.color: Style.capsuleBorderColor
-    border.width: Style.capsuleBorderWidth
-
-    Behavior on color { ColorAnimation { duration: Style.animationFast } }
-
-    // ── Horizontal layout ──────────────────────────────────────────────
-    RowLayout {
-      anchors.fill: parent
-      anchors.leftMargin:  Style.marginM
-      anchors.rightMargin: Style.marginM
-      spacing: Style.marginS
-      visible: !isVertical
-
-      NIcon {
-        icon: "building-mosque"
-        pointSize: root.iconSize
-        color: mouseArea.containsMouse ? Color.mOnHover : Color.mPrimary
-        Layout.alignment: Qt.AlignVCenter
-      }
-
-      NText {
-        id: labelText
-        text: root.displayText
-        pointSize: root.barFontSize
-        applyUiScale: false
-        color: mouseArea.containsMouse ? Color.mOnHover : (prayerNow ? Color.mPrimary : Color.mOnSurface)
-        Layout.alignment: Qt.AlignVCenter
-        Behavior on color { ColorAnimation { duration: 300 } }
+    onClicked: {
+      if (pluginApi) {
+        pluginApi.openPanel(root.screen, this)
       }
     }
 
-    // ── Vertical layout ────────────────────────────────────────────────
-    ColumnLayout {
-      anchors.centerIn: parent
-      spacing: Style.marginXS
-      visible: isVertical
-
-      NIcon {
-        icon: "building-mosque"
-        pointSize: Style.toOdd(root.capsuleHeight * 0.45)
-        color: mouseArea.containsMouse ? Color.mOnHover : Color.mPrimary
-        Layout.alignment: Qt.AlignHCenter
+    onRightClicked: {
+      var popupMenuWindow = PanelService.getPopupMenuWindow(screen)
+      if (popupMenuWindow) {
+        popupMenuWindow.showContextMenu(contextMenu)
       }
-
-      NText {
-        text: root.verticalLine1
-        pointSize: root.barFontSize * 0.7
-        applyUiScale: false
-        font.weight: Font.Medium
-        color: mouseArea.containsMouse ? Color.mOnHover : (prayerNow ? Color.mPrimary : Color.mOnSurface)
-        Layout.alignment: Qt.AlignHCenter
-        Behavior on color { ColorAnimation { duration: 300 } }
-      }
-
-      NText {
-        text: root.verticalLine2
-        pointSize: root.barFontSize * 0.8
-        applyUiScale: false
-        opacity: 0.75
-        color: mouseArea.containsMouse ? Color.mOnHover : (prayerNow ? Color.mPrimary : Color.mOnSurface)
-        Layout.alignment: Qt.AlignHCenter
-        visible: root.verticalLine2 !== ""
-        Behavior on color { ColorAnimation { duration: 300 } }
-      }
-    }
-
-    MouseArea {
-      id: mouseArea
-      anchors.fill: parent
-      hoverEnabled: true
-      cursorShape: Qt.PointingHandCursor
-      acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-      onClicked: mouse => {
-        if (mouse.button === Qt.LeftButton) {
-          if (pluginApi) pluginApi.openPanel(root.screen, root)
-        } else if (mouse.button === Qt.RightButton) {
-          PanelService.showContextMenu(contextMenu, root, screen)
-        }
-      }
-
-      onEntered: TooltipService.show(root, tooltipText, BarService.getTooltipDirection(root.screen?.name))
-      onExited:  TooltipService.hide()
     }
   }
 
@@ -211,8 +112,10 @@ Item {
       { "label": pluginApi?.tr("menu.settings")  ?? "Widget Settings",   "action": "settings", "icon": "settings" }
     ]
     onTriggered: function (action) {
-      contextMenu.close()
-      PanelService.closeContextMenu(screen)
+      var popupMenuWindow = PanelService.getPopupMenuWindow(screen)
+      if (popupMenuWindow) {
+        popupMenuWindow.close()
+      }
       if (action === "open") {
         pluginApi.openPanel(root.screen, root)
       } else if (action === "settings") {

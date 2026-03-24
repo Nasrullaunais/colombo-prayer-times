@@ -234,7 +234,6 @@ Item {
         Layout.fillWidth: true
         Layout.preferredHeight: prayerListColumn.implicitHeight
         horizontalPolicy: ScrollBar.AlwaysOff
-        reserveScrollbarSpace: false
         visible: prayerTimings !== null
 
         ColumnLayout {
