@@ -1,0 +1,62 @@
+{
+  "menu": {
+    "openPanel": "Open Prayer Times",
+    "settings": "Widget Settings"
+  },
+  "widget": {
+    "soon": "soon",
+    "now": "Now",
+    "tooltip": {
+      "noData": "Prayer data not loaded",
+      "countdown": "Time remaining"
+    }
+  },
+  "panel": {
+    "title": "Prayer Times",
+    "close": "Close",
+    "configure": "Enable the plugin in Settings",
+    "now": "Now",
+    "jumuah": "Jumu'ah",
+    "fajr": "Fajr",
+    "sunrise": "Sunrise",
+    "dhuhr": "Dhuhr",
+    "asr": "Asr",
+    "maghrib": "Maghrib",
+    "isha": "Isha"
+  },
+  "settings": {
+    "timetable": {
+      "header": "Timetable",
+      "desc": "Select the prayer timetable to use for Colombo."
+    },
+    "method": {
+      "label": "Calculation Method",
+      "desc": "ACJU follows the All Ceylon Jamiyyathul Ulama. The Old timetable is from the Dept. of Waqf / Majlis."
+    },
+    "display": {
+      "header": "Display"
+    },
+    "showCountdown": {
+      "label": "Show countdown",
+      "desc": "Show a live countdown to the next prayer in the bar instead of the static time."
+    },
+    "notifications": {
+      "header": "Notifications",
+      "desc": "Show a desktop notification when each prayer time begins."
+    },
+    "showNotifications": {
+      "label": "Prayer notifications"
+    },
+    "calibration": {
+      "header": "Calibration",
+      "desc": "Adjust the displayed Hijri date if it does not match your local moon sighting."
+    },
+    "hijriDayOffset": {
+      "label": "Hijri Day Adjustment",
+      "desc": "Shift the displayed Hijri day if the calculated date does not match local Sri Lanka moon sighting."
+    }
+  },
+  "error": {
+    "generic": "Failed to load prayer times."
+  }
+}

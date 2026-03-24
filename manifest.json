@@ -1,0 +1,25 @@
+{
+  "id": "colombo-prayer-times",
+  "name": "Colombo Prayer Times",
+  "version": "1.0.0",
+  "minNoctaliaVersion": "4.1.0",
+  "author": "User",
+  "license": "MIT",
+  "description": "Prayer times for Colombo, Sri Lanka using the ACJU or Old timetable. Fully offline with live countdown and desktop notifications.",
+  "tags": ["Bar", "Panel"],
+  "entryPoints": {
+    "main": "Main.qml",
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml",
+    "settings": "Settings.qml"
+  },
+  "dependencies": { "plugins": [] },
+  "metadata": {
+    "defaultSettings": {
+      "method": "acju",
+      "showCountdown": true,
+      "showNotifications": true,
+      "hijriDayOffset": 0
+    }
+  }
+}
