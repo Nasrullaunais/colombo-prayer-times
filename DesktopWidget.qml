@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import qs.Commons
 import qs.Modules.DesktopWidgets
 import qs.Widgets
@@ -8,24 +9,28 @@ DraggableDesktopWidget {
   id: root
   property var pluginApi: null
 
-  readonly property var mainInstance:   pluginApi?.mainInstance
-  readonly property var prayerTimings:  mainInstance?.prayerTimings  ?? null
+  readonly property var mainInstance:    pluginApi?.mainInstance
+  readonly property var prayerTimings: mainInstance?.prayerTimings  ?? null
   readonly property string nextPrayerName: mainInstance?.nextPrayerName ?? ""
   readonly property int    secondsToNext:  mainInstance?.secondsToNext  ?? -1
   readonly property bool   prayerNow:      secondsToNext === 0 && nextPrayerName !== ""
   readonly property bool   isJumuah:       new Date().getDay() === 5
-  readonly property bool   use12h:         Settings.data.location.use12hourFormat
+  readonly property bool use12h:         (typeof Settings !== "undefined" && Settings.data) ? Settings.data.location.use12hourFormat : false
 
-  // Per-second countdown refresh
+  // Per-second countdown refresh — always active so widget stays in sync
   Timer {
     interval: 1000
-    running: secondsToNext > 0
+    running: true
     repeat: true
     onTriggered: mainInstance?.updateCountdown()
   }
 
-  implicitWidth: 280
-  implicitHeight: 340
+  // Base dimensions before scaling
+  readonly property int baseWidth:  260
+  readonly property int baseHeight: 320
+
+  implicitWidth: Math.round(baseWidth  * widgetScale)
+  implicitHeight: Math.round(baseHeight * widgetScale)
 
   readonly property var prayerOrder: [
     { key: "Fajr",    labelKey: "panel.fajr",    icon: "sunrise"    },
@@ -49,23 +54,23 @@ DraggableDesktopWidget {
 
   ColumnLayout {
     anchors.fill: parent
-    anchors.margins: Style.marginM
-    spacing: Style.marginS
+    anchors.margins: Math.round(Style.marginM * widgetScale)
+    spacing: Math.round(Style.marginS * widgetScale)
 
     // ── Header ────────────────────────────────────────────────────────────
     RowLayout {
       Layout.fillWidth: true
-      spacing: Style.marginS
+      spacing: Math.round(Style.marginS * widgetScale)
 
       NIcon {
         icon: "building-mosque"
-        pointSize: Style.fontSizeL
+        pointSize: Math.round(Style.fontSizeL * widgetScale)
         color: Color.mPrimary
         Layout.alignment: Qt.AlignVCenter
       }
       NText {
         text: pluginApi?.tr("panel.title") ?? "Prayer Times"
-        pointSize: Style.fontSizeM
+        pointSize: Math.round(Style.fontSizeM * widgetScale)
         font.weight: Font.Bold
         color: Color.mOnSurface
         Layout.fillWidth: true
@@ -79,8 +84,8 @@ DraggableDesktopWidget {
       Layout.fillWidth: true
       Layout.fillHeight: true
       columns: 2
-      rowSpacing: Style.marginS
-      columnSpacing: Style.marginS
+      rowSpacing: Math.round(Style.marginS * widgetScale)
+      columnSpacing: Math.round(Style.marginS * widgetScale)
 
       Repeater {
         model: root.prayerOrder
@@ -93,9 +98,10 @@ DraggableDesktopWidget {
           readonly property bool   isNext:   pKey === nextPrayerName
           readonly property bool   isActive: isNext && prayerNow
 
+          readonly property int scaledRadius: Math.round(Style.radiusM * widgetScale)
           width:  (prayerGrid.width - prayerGrid.columnSpacing) / 2
           height: (prayerGrid.height - prayerGrid.rowSpacing * 2) / 3
-          radius: Style.radiusM
+          radius: scaledRadius
           color:  isActive ? Qt.alpha(Color.mPrimary, 0.20)
                 : isNext   ? Qt.alpha(Color.mPrimary, 0.10)
                            : Color.mSurfaceVariant
@@ -104,37 +110,40 @@ DraggableDesktopWidget {
 
           ColumnLayout {
             anchors.fill: parent
-            anchors.margins: Style.marginS
+            anchors.margins: Math.round(Style.marginS * widgetScale)
             spacing: 2
 
+            // Icon + Name row — centered horizontally
             RowLayout {
               Layout.fillWidth: true
-              spacing: Style.marginXS
+              spacing: Math.round(Style.marginXS * widgetScale)
+              Layout.alignment: Qt.AlignHCenter
 
               NIcon {
                 icon: modelData.icon
-                pointSize: Style.fontSizeS
+                pointSize: Math.round(Style.fontSizeS * widgetScale)
                 color: isNext ? Color.mPrimary : Color.mOnSurfaceVariant
                 Layout.alignment: Qt.AlignVCenter
               }
               NText {
                 text: pluginApi?.tr(modelData.labelKey) ?? modelData.key
-                pointSize: Style.fontSizeXS
+                pointSize: Math.round(Style.fontSizeXS * widgetScale)
                 font.weight: isNext ? Style.fontWeightSemiBold : Style.fontWeightRegular
                 color: isNext ? Color.mPrimary : Color.mOnSurfaceVariant
                 Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
+                Layout.alignment: Qt.AlignHCenter
                 elide: Text.ElideRight
               }
             }
 
+            // Time — centered horizontally and vertically
             NText {
               text: rawTime ? formatTime(rawTime) : "--:--"
-              pointSize: Style.fontSizeL
+              pointSize: Math.round(Style.fontSizeL * widgetScale)
               font.weight: isNext ? Font.Bold : Style.fontWeightMedium
               color: isNext ? Color.mPrimary : Color.mOnSurface
               Layout.fillWidth: true
-              horizontalAlignment: Text.AlignLeft
+              Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
             }
           }
         }

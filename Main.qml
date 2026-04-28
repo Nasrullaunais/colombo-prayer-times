@@ -28,6 +28,10 @@ Item {
   property int    secondsToNext:  -1
   property string nextPrayerName: ""
 
+  // ── Home detection ─────────────────────────────────────────────────────────
+  property bool isAtHome: false
+  property bool _homeCheckDone: false
+
   // ── Settings ──────────────────────────────────────────────────────────────
   property var cfg:      pluginApi?.pluginSettings || ({})
   property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
@@ -66,6 +70,8 @@ Item {
     oldCatProcess.command  = ["cat", pluginApi.pluginDir + "/assets/OLD.json"]
     acjuCatProcess.running = true
     oldCatProcess.running  = true
+    checkIsAtHome()
+    homeCheckTimer.start()
   }
 
   function _onDbLoaded() {
@@ -267,6 +273,7 @@ Item {
     if (today !== lastLoadedDate) {
       refreshToday()
       fetchHijriDate()
+      lastNotifiedMinute = ""
     } else {
       checkPrayerTimes()
       updateCountdown()
@@ -301,24 +308,83 @@ Item {
     onExited: notifProcess.running = false
   }
 
+  Process {
+    id: homeCheckProcess
+    property string _buf: ""
+    running: false
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: data => homeCheckProcess._buf += data
+    }
+    onExited: {
+      if (code === 0 && _buf.length > 0) {
+        const ip = _buf.trim()
+        isAtHome = ip.startsWith("192.168.8.")
+        Logger.d("ColomboPT", "Home check:", ip, "-> isAtHome:", isAtHome)
+      } else {
+        isAtHome = false
+        Logger.w("ColomboPT", "Home check failed, exit code:", code)
+      }
+      _homeCheckDone = true
+    }
+  }
+
+  Timer {
+    id: homeCheckTimer
+    interval: 300000
+    repeat: true
+    onTriggered: checkIsAtHome()
+  }
+
+  function checkIsAtHome() {
+    homeCheckProcess.command = ["sh", "-c", "ip route get 1.1.1.1 | awk '{print $7}'"]
+    homeCheckProcess._buf = ""
+    homeCheckProcess.running = true
+  }
+
   function sendNotification(title, body) {
     notifProcess.command = ["notify-send", "-a", "Colombo Prayer Times", "-u", "critical", "-t", "10000", title, body]
     notifProcess.running = true
   }
 
+  function formatTime12H(timeStr) {
+    if (!timeStr) return ""
+    const parts = timeStr.split(":")
+    if (parts.length < 2) return timeStr
+    let h = parseInt(parts[0])
+    const m = parts[1]
+    const ampm = h >= 12 ? "PM" : "AM"
+    h = h % 12
+    if (h === 0) h = 12
+    return h + ":" + m + " " + ampm
+  }
+
+  property string _pendingPrayerKey: ""
+  Timer {
+    id: delayedNotifTimer
+    interval: 300000
+    running: false
+    onTriggered: {
+      if (isAtHome && _pendingPrayerKey) {
+        sendNotification("Time to Pray " + _pendingPrayerKey + "!", "")
+      }
+      _pendingPrayerKey = ""
+    }
+  }
+
   function onPrayerTime(prayerKey) {
     if (!showNotifications) return
     const timeStr  = prayerTimings?.[prayerKey] || ""
+    const time12H  = formatTime12H(timeStr)
     const isJumuah = new Date().getDay() === 5
     if (prayerKey === "Dhuhr" && isJumuah) {
-      sendNotification("🕌 Jumu'ah — " + timeStr, "حان وقت صلاة الجمعة")
+      sendNotification("Jumu'ah — " + time12H, "")
       return
     }
-    const arNames = {
-      "Fajr": "الفجر", "Dhuhr": "الظهر", "Asr": "العصر",
-      "Maghrib": "المغرب", "Isha": "العشاء"
-    }
-    sendNotification("🕌 " + prayerKey + " — " + timeStr, "حان الآن موعد صلاة " + (arNames[prayerKey] || prayerKey))
+    sendNotification(prayerKey + " — " + time12H, "")
+
+    _pendingPrayerKey = prayerKey
+    delayedNotifTimer.restart()
   }
 
   // ── Countdown ─────────────────────────────────────────────────────────────

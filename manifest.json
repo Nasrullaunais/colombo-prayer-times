@@ -6,7 +6,7 @@
   "author": "User",
   "license": "MIT",
   "description": "Prayer times for Colombo, Sri Lanka using the ACJU or Old timetable. Fully offline with live countdown and desktop notifications.",
-  "tags": ["Bar", "Panel"],
+  "tags": ["Bar", "Desktop", "Panel"],
   "entryPoints": {
     "main": "Main.qml",
     "barWidget": "BarWidget.qml",

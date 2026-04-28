@@ -32,7 +32,7 @@ Item {
 
   property var cfg:      pluginApi?.pluginSettings || ({})
   property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
-  readonly property bool use12h: Settings.data.location.use12hourFormat
+  readonly property bool use12h: (typeof Settings !== "undefined" && Settings.data) ? Settings.data.location.use12hourFormat : false
 
   readonly property var    mainInstance:     pluginApi?.mainInstance
   readonly property var    prayerTimings:    mainInstance?.prayerTimings    ?? null
@@ -52,9 +52,9 @@ Item {
 
   readonly property color countdownColor: Color.mPrimary
 
-  // Per-second countdown refresh while panel is open
+  // Per-second countdown refresh while panel is open — always active
   Timer {
-    interval: 1000; running: secondsToNext > 0; repeat: true
+    interval: 1000; running: true; repeat: true
     onTriggered: {
       mainInstance?.updateCountdown()
       if (mainInstance && mainInstance.secondsToNext === 0)

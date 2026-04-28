@@ -18,7 +18,7 @@ Item {
   property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
 
   readonly property bool showCountdown: cfg.showCountdown ?? defaults.showCountdown ?? true
-  readonly property bool use12h:        Settings.data.location.use12hourFormat
+  readonly property bool use12h:        (typeof Settings !== "undefined" && Settings.data) ? Settings.data.location.use12hourFormat : false
   readonly property bool isJumuah:      new Date().getDay() === 5
 
   readonly property var    mainInstance:   pluginApi?.mainInstance
