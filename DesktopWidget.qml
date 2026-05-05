@@ -104,7 +104,7 @@ DraggableDesktopWidget {
           radius: scaledRadius
           color:  isActive ? Qt.alpha(Color.mPrimary, 0.20)
                 : isNext   ? Qt.alpha(Color.mPrimary, 0.10)
-                           : Color.mSurfaceVariant
+                           : "transparent"
 
           Behavior on color { ColorAnimation { duration: 300 } }
 
