@@ -109,15 +109,14 @@ DraggableDesktopWidget {
           Behavior on color { ColorAnimation { duration: 300 } }
 
           ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: Math.round(Style.marginS * widgetScale)
+            anchors.centerIn: parent
+            width: parent.width - 2 * Math.round(Style.marginS * widgetScale)
             spacing: 2
 
-            // Icon + Name row — centered horizontally
+            // Icon + Name row
             RowLayout {
-              Layout.fillWidth: true
-              spacing: Math.round(Style.marginXS * widgetScale)
               Layout.alignment: Qt.AlignHCenter
+              spacing: Math.round(Style.marginXS * widgetScale)
 
               NIcon {
                 icon: modelData.icon
@@ -130,20 +129,19 @@ DraggableDesktopWidget {
                 pointSize: Math.round(Style.fontSizeXS * widgetScale)
                 font.weight: isNext ? Style.fontWeightSemiBold : Style.fontWeightRegular
                 color: isNext ? Color.mPrimary : Color.mOnSurfaceVariant
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignHCenter
+                horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
               }
             }
 
-            // Time — centered horizontally and vertically
+            // Time
             NText {
+              Layout.alignment: Qt.AlignHCenter
               text: rawTime ? formatTime(rawTime) : "--:--"
               pointSize: Math.round(Style.fontSizeL * widgetScale)
               font.weight: isNext ? Font.Bold : Style.fontWeightMedium
               color: isNext ? Color.mPrimary : Color.mOnSurface
-              Layout.fillWidth: true
-              Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+              horizontalAlignment: Text.AlignHCenter
             }
           }
         }
